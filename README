@@ -1,0 +1,150 @@
+________________________________________________________________________________________________________________________________________________________________
+Group Members:
+1. Aayush Chourasia (2826829) a.chourasia@vikes.csuohio.edu
+2. Itishree Patel (2833006) i.patel74@vikes.csuohio.edu
+________________________________________________________________________________________________________________________________________________________________
+The group member contribution percentile: e.g., 50%-50%.
+1. Aayush Chourasia --> 51%
+2. Itishree Patel --> 49%
+________________________________________________________________________________________________________________________________________________________________
+Design details
+--> we have designed this project using 3 different files named as 
+1. final.c (main code for testing distributed locking)
+2. myapi.c (file containg all the distributed lock logic and init(), lock() and unlock().
+3. myapi.h (file contains all header files and function declarations)
+
+Here, firstly from the test application we are declaring the Strucutre object named as Msg msg; this object is used as a parameter for init(), lock() and unlock().
+
+then, initially we start the execution by calling the init(Msg *msg):
+init(Msg *msg): Initialing all important variables of structure msg.
+--> we are doing 2 main operations here, inserting the application's IP and calling a funciton using thread for listening all the incoming messages.
+--> for inserting IP we are calling one more user define function named as insert_ip();
+--> we are using pthread to create a thread of function named as listen_to_call(), this will always running following all lamport clock rules, updating own clock, maintaining defer array and replying the receive messages accordingly whether it is REQUEST type or RESPONSE type.
+--> i.e. when we request to enter in critical section  we will not reply to incoming message as a permission to enter in critical section, moreover, if we are not requested for critical section we will just update our clock and reply imidiately.
+--> We are also using SEMAPHORES to check we received all the replies and then giving permission to enter in Critial section to own program.
+--> sem_init(), sem_wait() & sem_post().
+
+
+Then we have another function named as 
+lock(Msg *msg):
+--> when we call this function we send a REQUEST message to all the participants to ask permission to enter in critical secton, after this will wait for reply, if we receive all the response we will go in critical section and execute.
+--> if some other process is still in Critial seciton will wait for his responce, in between if we receive any request who's lamport clock is lesser than us then we will be waiting and give reply to other process to execute.
+--> if our timestamp is lesser, we will put this request in DEFER_ARRAY and reply it after we come out of critical section.
+--> we are also updating our clock in lock funciton itself (we are updating clock while sending and receiving).
+
+unlock(Msg *msg):
+--> We are calling this fuction when we are done with critical seciton, here, we are again initialing all the important variables to default value.
+--> checking the DEFERED_ARRAY and replying to other processes.
+--> We are also updating our clock here by 1 (local clock)
+________________________________________________________________________________________________________________________________________________________________
+Compiling instruction and execution sequence (with commands)
+--> I have provided the MakeFile for compilation (which includes myapi.c, myapi.h and final.c), final.c is a simulation program to test the distributed system.
+
+
+Note: If it says Address already in USE then you need to change the portNO in myapi.c file whereever there is 0x7778
+
+Steps: 
+1. make clean (command to clean the binary files)
+2. make (this will make the necessary compiled files also one binary file i.e. final)
+3. Run ./final on different servers
+
+(Note): API insert its IP in one file named a example.txt, make sure to delete this file after every simulation or just type "make clean" command.
+
+If you are using this API to test your application make sure to put API's header file in your code:
+#include "myapi.h".
+________________________________________________________________________________________________________________________________________________________________
+A sample test run
+1. aachoura@turing3:~/proj4$ make clean   --> Did make clean 
+rm -f final libmyapi.a myapi.o example.txt
+
+2. Running the ./final in multiple servers (linux machines):
+aachoura@schubert:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!   --> on Schubert Server
+
+aachoura@turing1:~/proj4$ ./final			
+do you want to lock 1 for yes 2 for Exit!    --> on turing1                  
+
+aachoura@turing3:~/proj4$ ./final 
+do you want to lock 1 for yes 2 for Exit!    ---> on turing3
+
+aachoura@monet:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!    ---> om monet server
+
+example.txt file consists IP's of all four servers:
+aachoura@spirit:~/proj4$ cat example.txt
+137.148.204.21
+137.148.142.16
+137.148.142.19
+137.148.204.24
+
+Now, I am pressing 1 on server 1 to enter in critical section, will send REQ to all servers and receive response and then go in Critical section:
+SERVER 1:
+aachoura@schubert:~/proj4$ ./final 
+do you want to lock 1 for yes 2 for Exit!
+1
+In critical section
+Want to come out of Critical Section press 1 
+
+SERVER 2,3,4:
+aachoura@turing1:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!
+
+Now SERVER 2 Wants to Go in Critial seciton, but SERVER 1 is already there in it so SERVER 2 will wait:
+aachoura@turing1:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!
+1
+
+When server 1: finihes its execution then server 2 will go in Critical section:
+aachoura@schubert:~/proj4$ ./final 
+do you want to lock 1 for yes 2 for Exit!
+1
+In critical section
+Want to come out of Critical Section press 1 
+1
+clock : 2
+do you want to lock 1 for yes 2 for Exit!
+
+
+SERVER 2: 
+Now SERVER 2 is in Critial seciton 
+aachoura@turing1:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!
+1
+In critical section
+Want to come out of Critical Section press 1 
+
+Now 3 wants to go in Critical section and 4 is just listing to requests and replying
+server 3 will wait
+aachoura@turing3:~/proj4$ ./final do you want to lock 1 for yes 2 for Exit!
+1
+
+Now server 2 done with its execution when server 3 will go in Critical section:
+aachoura@turing1:~/proj4$ ./final
+do you want to lock 1 for yes 2 for Exit!
+1
+In critical section
+Want to come out of Critical Section press 1 
+1
+clock : 2
+do you want to lock 1 for yes 2 for Exit!
+
+And now Server 3 is in Critical section:
+aachoura@turing3:~/proj4$ ./final do you want to lock 1 for yes 2 for Exit!
+1
+In critical section
+Want to come out of Critical Section press 1 
+
+
+This is how, more than 4 machines can perform mutual excution using lamport clock.
+
+I am also tying to display the local lamport clock time at each machine.
+_______________________________________________________________________________________________________________________________________________________________
+
+#Please explicitly state which part, if there is any, does not work and the possible reasons why that module does not work.
+--> Everything is working properly, just that when any machine disconnects from system, whole system will get distrub, becuase that machines IP is already there in example.txt file and all other machines are using that file to send request.
+
+if we send request to machine which got disconnected, we will not receive any response and other process will go on waiting state.
+
+This is something the future work, will try to notify other users when any machine gets disconneted from system or will try to remove its IP address from file itself for smooth communication between other process.
+
+_______________________________________________________________________________________________________________________________________________________________
